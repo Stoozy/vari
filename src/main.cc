@@ -2,29 +2,22 @@
 #include <fstream>
 #include <sstream>
 
+#include <lexer.hpp>
+#include <vari.hpp>
+
 using std::cout; 
 using std::cin; 
 using std::string;
 
-#include <util.h>
-
-
-class Vari{
-    private:
-        void run(string source);
-        void report(int line, string where, string mesg);
-    public:
-        void error(int line, string mesg);
-        void run_file(string filepath);
-        void run_prompt();
-};
+Vari g_vari;
 
 
 void Vari::run(string source){
-    vector<string> tokens = util::split(source, " ");
 
-    for(string token: tokens)
-        cout << token;
+    //for(string token: tokens)
+    //    cout << token;
+
+    if(errored) exit(1);
 }
 
 void Vari::run_file(string fp){
@@ -49,15 +42,23 @@ void Vari::run_prompt(){
 }
 
 
+void Vari::report(int line, string where, string msg){
+    cout << "Error On line: " << line << " " << where << ": " << msg;
+}
+
+void Vari::error(int line, string msg){
+    report(line, "", msg);
+    errored = true;
+}
+
 int main(int argc, char * argv[]){
-    Vari vari;
 
     if(argc > 2){
         cout << "Usage: vari <script>";
     } else if(argc == 2) {
-        vari.run_file(argv[1]);
+        g_vari.run_file(argv[1]);
     } else {
-        vari.run_prompt();
+        g_vari.run_prompt();
     }
 
     return 0;
