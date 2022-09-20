@@ -11,11 +11,17 @@ using std::string;
 
 Vari g_vari;
 
+extern const string g_token_debug[37];
 
 void Vari::run(string source){
+    Lexer lexer(source);
+    vector<Token> tokens = lexer.scanTokens();
 
-    //for(string token: tokens)
-    //    cout << token;
+    for(Token &token : tokens)
+        if(token.type <37 && token.type >= 0)
+            cout << g_token_debug[token.type] << "\n";
+
+    cout << "Scanned " << tokens.size() << " tokens\n";
 
     if(errored) exit(1);
 }
@@ -43,7 +49,7 @@ void Vari::run_prompt(){
 
 
 void Vari::report(int line, string where, string msg){
-    cout << "Error On line: " << line << " " << where << ": " << msg;
+    cout << "Error on line " << line << " " << where << ": " << msg << "\n";
 }
 
 void Vari::error(int line, string msg){

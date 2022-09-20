@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <lexer.hpp>
+#include <algorithm>
+#include <map>
 
 using std::string;
 

@@ -5,7 +5,8 @@
 Token::Token(){ }
 Token::~Token(){ }
 
-Token::Token(enum TokenType type, string lexeme, Object literal, int line){ }
+Token::Token(enum TokenType t, string lex, Object lit, int ln)
+    : type(t), lexeme(lex), literal(lit), line(ln) { }
 
 
 string Token::toString(){
