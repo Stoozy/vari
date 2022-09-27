@@ -43,6 +43,6 @@ pub struct Token {
 
 impl Token {
     pub fn to_string(self) -> String {
-        format!("{} {:?}", self.token_type.to_string(), self.literal)
+        format!("{} {} {:?}", self.token_type.to_string() , self.lexeme, self.literal)
     }
 }

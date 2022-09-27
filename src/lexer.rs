@@ -80,6 +80,7 @@ impl Lexer {
 
     pub fn scan_tokens(&mut self) -> Vec<Token> {
         while !self.done() {
+            self.start = self.current;
             self.scan_token();
         }
 
