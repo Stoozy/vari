@@ -1,17 +1,12 @@
-use std::{
-    any::{Any, TypeId},
-    sync::Arc,
-};
+use std::{any::Any, collections::HashMap, sync::Arc};
 
-use crate::{
-    vari::token::{Token, TokenType},
-    VARI,
-};
+use crate::token::{Token, TokenType};
+use crate::vari::VARI;
 
 pub struct Lexer {
+    keywords: HashMap<String, TokenType>,
     tokens: Vec<Token>,
     source: String,
-
     line: usize,
     current: usize,
     start: usize,
@@ -19,7 +14,25 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(src: String) -> Self {
+        let mut keywords_map = HashMap::new();
+        keywords_map.insert("and".to_owned(), TokenType::AND);
+        keywords_map.insert("else".to_owned(), TokenType::ELSE);
+        keywords_map.insert("false".to_owned(), TokenType::FALSE);
+        keywords_map.insert("for".to_owned(), TokenType::FOR);
+        keywords_map.insert("fun".to_owned(), TokenType::FUN);
+        keywords_map.insert("if".to_owned(), TokenType::IF);
+        keywords_map.insert("nil".to_owned(), TokenType::NIL);
+        keywords_map.insert("or".to_owned(), TokenType::OR);
+        keywords_map.insert("print".to_owned(), TokenType::PRINT);
+        keywords_map.insert("return".to_owned(), TokenType::RETURN);
+        keywords_map.insert("super".to_owned(), TokenType::SUPER);
+        keywords_map.insert("this".to_owned(), TokenType::THIS);
+        keywords_map.insert("true".to_owned(), TokenType::TRUE);
+        keywords_map.insert("var".to_owned(), TokenType::VAR);
+        keywords_map.insert("while".to_owned(), TokenType::WHILE);
+
         Self {
+            keywords: keywords_map,
             tokens: vec![],
             source: src,
             line: 1,
@@ -65,6 +78,13 @@ impl Lexer {
 
     fn is_digit(&self, c: char) -> bool {
         c >= '0' && c <= '9'
+    }
+    fn is_alpha(&self, c: char) -> bool {
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+    }
+
+    fn is_alphanumeric(&self, c: char) -> bool {
+        self.is_alpha(c) || self.is_digit(c)
     }
 
     fn match_expected(&mut self, expected: char) -> bool {
@@ -115,6 +135,23 @@ impl Lexer {
 
         let token_literal_value: String = self.source[self.start + 1..self.current - 1].to_owned();
         self.add_token_with_literal(TokenType::STRING, Some(Arc::new(token_literal_value)));
+    }
+
+    fn consume_identifier(&mut self) {
+        while self.is_alphanumeric(self.peek()) {
+            self.advance();
+        }
+
+        // check if IDENTIFIER is a reserved keyword
+        let ident = self.source[self.start..self.current].to_owned();
+        match self.keywords.get(&ident) {
+            Some(keyword) => {
+                self.add_token(keyword.to_owned());
+            }
+            None => {
+                self.add_token(TokenType::IDENTIFIER);
+            }
+        }
     }
 
     fn scan_token(&mut self) -> () {
@@ -173,13 +210,15 @@ impl Lexer {
                     self.advance();
                 }
             }
-
+            // string literals
             '"' => {
                 self.consume_string_literal();
             }
             c => {
                 if self.is_digit(c) {
                     self.consume_num_literal();
+                } else if self.is_alpha(c) {
+                    self.consume_identifier();
                 } else {
                     VARI.error(self.line, format!("Unexpected character").as_str());
                 }
@@ -199,6 +238,7 @@ impl Lexer {
             line: self.line,
             literal: None,
         });
+
         self.tokens.clone()
     }
 }

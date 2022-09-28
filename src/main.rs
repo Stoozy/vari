@@ -1,16 +1,13 @@
-pub mod lexer;
-pub mod vari;
+mod lexer;
+mod token;
+mod vari;
 
 use std::env;
 use std::fs;
 
-//use vari::token::TokenType::*;
-//use vari::token::Token;
-use vari::vari::Vari;
-
 use crate::lexer::Lexer;
-
-const VARI: Vari = Vari { had_error: false };
+use vari::Vari;
+use vari::VARI;
 
 impl Vari {
     fn report(&self, line: usize, location: &str, msg: &str) -> () {
