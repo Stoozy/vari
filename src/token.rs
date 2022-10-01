@@ -3,7 +3,9 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+use crate::vari::VariTypes;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
     // Single-character tokens.
     LPAREN,
@@ -61,11 +63,11 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub line: usize,
-    pub literal: Option<Arc<dyn Any>>,
+    pub literal: Option<Box<VariTypes>>,
 }
 
 impl Token {
-    pub fn new(t: TokenType, lex: String, lno: usize, lit: Option<Arc<dyn Any>>) -> Self {
+    pub fn new(t: TokenType, lex: String, lno: usize, lit: Option<Box<VariTypes>>) -> Self {
         Token {
             token_type: t,
             lexeme: lex,

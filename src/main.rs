@@ -3,6 +3,7 @@ mod token;
 mod vari;
 mod expr;
 mod tests;
+mod parser;
 
 use std::env;
 use vari::VARI;

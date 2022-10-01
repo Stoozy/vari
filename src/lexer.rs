@@ -1,7 +1,7 @@
-use std::{any::Any, collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::token::{Token, TokenType};
-use crate::vari::VARI;
+use crate::vari::{VARI, VariTypes};
 
 pub struct Lexer {
     keywords: HashMap<String, TokenType>,
@@ -50,7 +50,7 @@ impl Lexer {
         self.source.as_bytes()[self.current - 1] as char
     }
 
-    fn add_token_with_literal(&mut self, tk_type: TokenType, literal: Option<Arc<dyn Any>>) {
+    fn add_token_with_literal(&mut self, tk_type: TokenType, literal: Option<Box<VariTypes>>) {
         let strval = self.source[self.start..self.current].to_owned();
         self.tokens
             .push(Token::new(tk_type, strval, self.line, literal));
@@ -113,7 +113,7 @@ impl Lexer {
 
         match num_substr.parse::<f64>() {
             Ok(val) => {
-                self.add_token_with_literal(TokenType::NUMBER, Some(Arc::new(val)));
+                self.add_token_with_literal(TokenType::NUMBER, Some(Box::new(VariTypes::Num(val))));
             }
             _ => {
                 VARI.error(self.line, "Invalid number type");
@@ -134,7 +134,7 @@ impl Lexer {
         self.advance();
 
         let token_literal_value: String = self.source[self.start + 1..self.current - 1].to_owned();
-        self.add_token_with_literal(TokenType::STRING, Some(Arc::new(token_literal_value)));
+        self.add_token_with_literal(TokenType::STRING, Some(Box::new(VariTypes::String(token_literal_value))));
     }
 
     fn consume_identifier(&mut self) {
