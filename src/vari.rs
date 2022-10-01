@@ -1,4 +1,4 @@
-use crate::lexer::Lexer;
+use crate::{lexer::Lexer, parser::{self, Parser}, expr::{Expr, AstPrinter}};
 use std::fs;
 pub static VARI: Vari = Vari { had_error: false };
 
@@ -6,6 +6,13 @@ pub struct Vari {
     pub had_error: bool,
 }
 
+#[derive(Debug, Clone)]
+pub enum VariTypes {
+    Nil,
+    Num(f64),
+    String(String),
+    Boolean(bool),
+}
 
 impl Vari {
     fn report(&self, line: usize, location: &str, msg: &str) -> () {
@@ -17,17 +24,22 @@ impl Vari {
         let mut lexer: Lexer = Lexer::new(source.to_owned());
 
         let tokens = lexer.scan_tokens();
-        let n_tokens = tokens.len();
+        let mut parser : Parser = Parser::new(tokens);
 
-        for token in tokens {
-            println!("{}", token.to_string());
-        }
+        let expression : Expr = parser.parse();
 
-        println!("Scanned {} tokens", n_tokens);
+
+        //for token in tokens {
+        //    println!("{}", token.to_string());
+        //}
 
         if self.had_error {
             std::process::exit(1);
         }
+
+        let mut printer : AstPrinter = AstPrinter::new();
+        println!("{}", printer.print(expression));
+
     }
 
     fn read_source(&self, file_path: &str) -> Result<String, Box<dyn std::error::Error>> {

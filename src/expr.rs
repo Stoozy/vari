@@ -1,10 +1,7 @@
 use crate::token::Token;
 
-pub enum VariTypes {
-    Void,
-    Num(f64),
-    String(String),
-}
+use crate::vari::VariTypes;
+
 
 pub enum Expr {
     Binary {lhs: Box<Expr>, op: Token, rhs: Box<Expr>},
@@ -61,8 +58,9 @@ impl Visitor<String> for AstPrinter {
             },
             Expr::Literal { value  } => {
                 match *value {
-                    VariTypes::Void => { "nil".to_owned()},
+                    VariTypes::Nil => { "nil".to_owned()},
                     VariTypes::Num(fp) => { fp.to_string()},
+                    VariTypes::Boolean(b) => { b.to_string()},
                     VariTypes::String(strval) => { strval }
                 }
             },
