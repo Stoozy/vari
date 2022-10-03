@@ -1,13 +1,16 @@
 use crate::{
-    expr::{AstPrinter, Expr},
+    expr::{AstPrinter, Expr, Interpreter},
     lexer::Lexer,
     parser::{self, Parser},
 };
+
 use std::io;
+use std::{any::Any, sync::Arc};
 use std::{
     fs,
     io::{stdout, Write},
 };
+
 pub static VARI: Vari = Vari { had_error: false };
 
 pub struct Vari {
@@ -20,6 +23,7 @@ pub enum VariTypes {
     Num(f64),
     String(String),
     Boolean(bool),
+    Object(Arc<dyn Any>),
 }
 
 impl Vari {
@@ -36,6 +40,9 @@ impl Vari {
 
         let expression: Expr = parser.parse();
 
+        let interpreter: Interpreter = Interpreter::new();
+        interpreter.interpret(expression);
+
         //for token in tokens {
         //    println!("{}", token.to_string());
         //}
@@ -44,8 +51,8 @@ impl Vari {
             std::process::exit(1);
         }
 
-        let mut printer: AstPrinter = AstPrinter::new();
-        println!("{}", printer.print(expression));
+        //let mut printer : AstPrinter = AstPrinter::new();
+        //println!("{}", printer.print(expression));
     }
 
     fn read_source(&self, file_path: &str) -> Result<String, Box<dyn std::error::Error>> {

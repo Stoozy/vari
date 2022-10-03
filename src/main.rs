@@ -1,13 +1,12 @@
+mod expr;
 mod lexer;
+mod parser;
+mod tests;
 mod token;
 mod vari;
-mod expr;
-mod tests;
-mod parser;
 
 use std::env;
 use vari::VARI;
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();

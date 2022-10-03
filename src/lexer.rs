@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::token::{Token, TokenType};
-use crate::vari::{VARI, VariTypes};
+use crate::vari::{VariTypes, VARI};
 
 pub struct Lexer {
     keywords: HashMap<String, TokenType>,
@@ -134,7 +134,10 @@ impl Lexer {
         self.advance();
 
         let token_literal_value: String = self.source[self.start + 1..self.current - 1].to_owned();
-        self.add_token_with_literal(TokenType::STRING, Some(Box::new(VariTypes::String(token_literal_value))));
+        self.add_token_with_literal(
+            TokenType::STRING,
+            Some(Box::new(VariTypes::String(token_literal_value))),
+        );
     }
 
     fn consume_identifier(&mut self) {
