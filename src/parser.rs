@@ -32,7 +32,7 @@ impl Parser {
 
         if self.match_list(vec![TokenType::TRUE]) {
             return Expr::Literal {
-                value: Box::new(VariTypes::Boolean(false)),
+                value: Box::new(VariTypes::Boolean(true)),
             };
         }
 

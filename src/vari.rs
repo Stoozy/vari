@@ -1,15 +1,8 @@
-use crate::{
-    expr::{AstPrinter, Expr, Interpreter},
-    lexer::Lexer,
-    parser::{self, Parser},
-};
+use crate::{expr::Expr, interpreter::Interpreter, lexer::Lexer, parser::Parser};
 
 use std::io;
 use std::{any::Any, sync::Arc};
-use std::{
-    fs,
-    io::{stdout, Write},
-};
+use std::{fs, io::Write};
 
 pub static VARI: Vari = Vari { had_error: false };
 
@@ -32,7 +25,6 @@ impl Vari {
     }
 
     fn run(&self, source: &str) {
-        println!("Source: {}", source);
         let mut lexer: Lexer = Lexer::new(source.to_owned());
 
         let tokens = lexer.scan_tokens();
@@ -43,16 +35,9 @@ impl Vari {
         let interpreter: Interpreter = Interpreter::new();
         interpreter.interpret(expression);
 
-        //for token in tokens {
-        //    println!("{}", token.to_string());
-        //}
-
         if self.had_error {
             std::process::exit(1);
         }
-
-        //let mut printer : AstPrinter = AstPrinter::new();
-        //println!("{}", printer.print(expression));
     }
 
     fn read_source(&self, file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -70,7 +55,7 @@ impl Vari {
             print!("> ");
             io::stdout().flush().unwrap();
             match io::stdin().read_line(&mut user_inp) {
-                Ok(val) => {
+                Ok(_) => {
                     self.run(user_inp.as_str());
                 }
                 Err(_) => todo!(),
