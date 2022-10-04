@@ -50,6 +50,7 @@ impl Interpreter {
         if let VariTypes::Nil = *a.clone() {
             return false;
         }
+
         if let VariTypes::Nil = *b.clone() {
             return false;
         }

@@ -26,10 +26,9 @@ impl Vari {
 
     fn run(&self, source: &str) {
         let mut lexer: Lexer = Lexer::new(source.to_owned());
-
         let tokens = lexer.scan_tokens();
-        let mut parser: Parser = Parser::new(tokens);
 
+        let mut parser: Parser = Parser::new(tokens);
         let expression: Expr = parser.parse();
 
         let interpreter: Interpreter = Interpreter::new();

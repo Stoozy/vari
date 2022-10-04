@@ -169,7 +169,7 @@ impl Parser {
 
     fn equality(&mut self) -> Expr {
         let mut expr: Expr = self.comparison();
-        while self.match_list(vec![TokenType::NE, TokenType::EQUAL]) {
+        while self.match_list(vec![TokenType::NE, TokenType::ISEQ]) {
             let operator: Token = self.prev_token();
             let rhs: Expr = self.comparison();
             expr = Expr::Binary {
