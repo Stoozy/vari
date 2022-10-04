@@ -1,4 +1,5 @@
-use crate::{expr::Expr, interpreter::Interpreter, lexer::Lexer, parser::Parser};
+use crate::interpreter::Interpreter;
+use crate::{lexer::Lexer, parser::Parser};
 
 use std::io;
 use std::{any::Any, sync::Arc};
@@ -29,10 +30,10 @@ impl Vari {
         let tokens = lexer.scan_tokens();
 
         let mut parser: Parser = Parser::new(tokens);
-        let expression: Expr = parser.parse();
+        let statements = parser.parse();
 
-        let interpreter: Interpreter = Interpreter::new();
-        interpreter.interpret(expression);
+        let mut interpreter: Interpreter = Interpreter::new();
+        interpreter.interpret(statements);
 
         if self.had_error {
             std::process::exit(1);

@@ -1,4 +1,4 @@
-use crate::token::{Token, TokenType};
+use crate::token::Token;
 use crate::vari::VariTypes;
 
 pub enum Expr {
@@ -19,7 +19,7 @@ pub enum Expr {
     },
 }
 
-pub trait Visitor<T> {
+pub trait ExprVisitor<T> {
     fn visit_expr(&mut self, expr: Expr) -> T;
 }
 
@@ -49,7 +49,7 @@ impl AstPrinter {
     }
 }
 
-impl Visitor<String> for AstPrinter {
+impl ExprVisitor<String> for AstPrinter {
     fn visit_expr(&mut self, expr: Expr) -> String {
         match expr {
             Expr::Binary { lhs, op, rhs } => {

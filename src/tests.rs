@@ -6,6 +6,7 @@ mod Tests {
         use crate::expr::AstPrinter;
         use crate::expr::Expr;
         use crate::token::{Token, TokenType};
+        use crate::vari::VariTypes;
 
         let mut printer: AstPrinter = AstPrinter::new();
 

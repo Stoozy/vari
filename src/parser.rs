@@ -1,3 +1,4 @@
+use crate::stmt::Stmt;
 use crate::vari::VariTypes;
 use crate::{
     expr::Expr,
@@ -133,6 +134,7 @@ impl Parser {
         if !self.done() {
             self.current += 1;
         }
+
         self.prev_token();
     }
 
@@ -182,7 +184,33 @@ impl Parser {
         expr
     }
 
-    pub fn parse(&mut self) -> Expr {
-        self.expression()
+    fn print_stmt(&mut self) -> Stmt {
+        let value = self.expression();
+        self.consume(TokenType::SEMICOLON, "Expected ';' after value.");
+        Stmt::Print(value)
+    }
+
+    fn expr_stmt(&mut self) -> Stmt {
+        let expr = self.expression();
+        self.consume(TokenType::SEMICOLON, "Expected ';' after value.");
+        Stmt::Expression(expr)
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if self.match_list(vec![TokenType::PRINT]) {
+            return self.print_stmt();
+        }
+
+        self.expr_stmt()
+    }
+
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut statements: Vec<Stmt> = vec![];
+
+        while !self.done() {
+            statements.push(self.statement());
+        }
+
+        statements
     }
 }

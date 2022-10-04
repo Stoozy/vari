@@ -1,4 +1,5 @@
-use crate::expr::Expr;
+use crate::expr::{Expr, ExprVisitor};
+use crate::stmt::{Stmt, StmtVisitor};
 use crate::token::TokenType;
 use crate::vari::VariTypes;
 
@@ -9,12 +10,18 @@ impl Interpreter {
         Self
     }
 
-    pub fn interpret(&self, expr: Expr) {
-        let res = self.evaluate(expr);
-        println!("{}", self.stringify(*res));
+    fn execute(&mut self, statement: Stmt) {
+        self.visit_stmt(statement);
+    }
+
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+        for statement in statements {
+            self.execute(statement);
+        }
     }
 
     pub fn stringify(&self, vari_obj: VariTypes) -> String {
+        // TODO: maybe move this to the enums to_string() ?
         match vari_obj {
             VariTypes::Nil => {
                 return "nil".to_owned();
@@ -26,8 +33,8 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate(&self, expr: Expr) -> Box<VariTypes> {
-        return self.visit(expr);
+    pub fn evaluate(&mut self, expr: Expr) -> Box<VariTypes> {
+        return self.visit_expr(expr);
     }
 
     // for future error handling
@@ -79,8 +86,10 @@ impl Interpreter {
             _ => return true,
         }
     }
+}
 
-    fn visit(&self, expr: Expr) -> Box<VariTypes> {
+impl ExprVisitor<Box<VariTypes>> for Interpreter {
+    fn visit_expr(&mut self, expr: Expr) -> Box<VariTypes> {
         match expr {
             Expr::Binary { lhs, op, rhs } => {
                 let left = self.evaluate(*lhs);
@@ -170,6 +179,20 @@ impl Interpreter {
             }
             Expr::Literal { value } => {
                 return value;
+            }
+        }
+    }
+}
+
+impl StmtVisitor<()> for Interpreter {
+    fn visit_stmt(&mut self, stmt: Stmt) {
+        match stmt {
+            Stmt::Expression(expr) => {
+                self.evaluate(expr);
+            }
+            Stmt::Print(expr) => {
+                let val = self.evaluate(expr);
+                println!("{}", self.stringify(*val));
             }
         }
     }
