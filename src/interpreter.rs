@@ -1,13 +1,19 @@
+use crate::environment::Environment;
 use crate::expr::{Expr, ExprVisitor};
 use crate::stmt::{Stmt, StmtVisitor};
 use crate::token::TokenType;
 use crate::vari::VariTypes;
 
-pub struct Interpreter;
+#[derive(Debug, Clone)]
+pub struct Interpreter {
+    env: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self
+        Self {
+            env: Environment::new(),
+        }
     }
 
     fn execute(&mut self, statement: Stmt) {
@@ -180,6 +186,14 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
             Expr::Literal { value } => {
                 return value;
             }
+            Expr::Variable { value } => {
+                return Box::new(self.env.get(value));
+            }
+            Expr::Assign { name, value_expr } => {
+                let value = self.evaluate(*value_expr);
+                self.env.assign(name.lexeme, *value);
+                todo!()
+            }
         }
     }
 }
@@ -194,6 +208,15 @@ impl StmtVisitor<()> for Interpreter {
                 let val = self.evaluate(expr);
                 println!("{}", self.stringify(*val));
             }
+            Stmt::Var(name, initializer) => match initializer {
+                Some(expr_val) => {
+                    let val = self.evaluate(expr_val);
+                    self.env.define(name.lexeme, *val);
+                }
+                None => {
+                    self.env.define(name.lexeme, VariTypes::Nil);
+                }
+            },
         }
     }
 }

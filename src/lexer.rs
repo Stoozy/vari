@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::token::{Token, TokenType};
-use crate::vari::{VariTypes, VARI};
+use crate::vari::{Vari, VariTypes};
 
 pub struct Lexer {
     keywords: HashMap<String, TokenType>,
@@ -10,10 +10,11 @@ pub struct Lexer {
     line: usize,
     current: usize,
     start: usize,
+    vari: Vari,
 }
 
 impl Lexer {
-    pub fn new(src: String) -> Self {
+    pub fn new(src: String, vari: Vari) -> Self {
         let mut keywords_map = HashMap::new();
         keywords_map.insert("and".to_owned(), TokenType::AND);
         keywords_map.insert("else".to_owned(), TokenType::ELSE);
@@ -28,7 +29,7 @@ impl Lexer {
         keywords_map.insert("super".to_owned(), TokenType::SUPER);
         keywords_map.insert("this".to_owned(), TokenType::THIS);
         keywords_map.insert("true".to_owned(), TokenType::TRUE);
-        keywords_map.insert("var".to_owned(), TokenType::VAR);
+        keywords_map.insert("let".to_owned(), TokenType::LET);
         keywords_map.insert("while".to_owned(), TokenType::WHILE);
 
         Self {
@@ -38,6 +39,7 @@ impl Lexer {
             line: 1,
             current: 0,
             start: 0,
+            vari,
         }
     }
 
@@ -116,7 +118,7 @@ impl Lexer {
                 self.add_token_with_literal(TokenType::NUMBER, Some(Box::new(VariTypes::Num(val))));
             }
             _ => {
-                VARI.error(self.line, "Invalid number type");
+                self.vari.error(self.line, "Invalid number type");
             }
         }
     }
@@ -223,7 +225,8 @@ impl Lexer {
                 } else if self.is_alpha(c) {
                     self.consume_identifier();
                 } else {
-                    VARI.error(self.line, format!("Unexpected character").as_str());
+                    self.vari
+                        .error(self.line, format!("Unexpected character").as_str());
                 }
             }
         }

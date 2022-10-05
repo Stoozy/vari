@@ -47,7 +47,7 @@ pub enum TokenType {
     SUPER,
     THIS,
     TRUE,
-    VAR,
+    LET,
     WHILE,
     EOF,
 }

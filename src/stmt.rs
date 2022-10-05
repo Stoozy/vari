@@ -1,8 +1,9 @@
-use crate::expr::Expr;
+use crate::{expr::Expr, token::Token};
 
 pub enum Stmt {
     Expression(Expr),
     Print(Expr),
+    Var(Token, Option<Expr>), // name, initializer
 }
 
 pub trait StmtVisitor<T> {

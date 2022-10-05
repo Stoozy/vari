@@ -3,7 +3,6 @@ use crate::vari::VariTypes;
 use crate::{
     expr::Expr,
     token::{Token, TokenType},
-    vari::VARI,
 };
 
 pub struct Parser {
@@ -16,12 +15,14 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    fn consume(&mut self, token_type: TokenType, err: &str) {
+    fn consume(&mut self, token_type: TokenType, err: &str) -> Token {
         if self.check(token_type) {
-            return self.advance();
+            self.advance();
+            return self.tokens[self.current - 1].clone();
         }
 
-        VARI.error(0, err);
+        //VARI.error(0, err); // maybe make vari a member?
+        unreachable!()
     }
 
     fn primary(&mut self) -> Expr {
@@ -30,7 +31,6 @@ impl Parser {
                 value: Box::new(VariTypes::Boolean(false)),
             };
         }
-
         if self.match_list(vec![TokenType::TRUE]) {
             return Expr::Literal {
                 value: Box::new(VariTypes::Boolean(true)),
@@ -46,6 +46,12 @@ impl Parser {
         if self.match_list(vec![TokenType::NUMBER, TokenType::STRING]) {
             return Expr::Literal {
                 value: self.prev_token().literal.unwrap(),
+            };
+        }
+
+        if self.match_list(vec![TokenType::IDENTIFIER]) {
+            return Expr::Variable {
+                value: self.prev_token(),
             };
         }
 
@@ -169,6 +175,25 @@ impl Parser {
         false
     }
 
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+
+        if self.match_list(vec![TokenType::EQUAL]) {
+            let _equals = self.prev_token();
+            let rhs = self.assignment();
+
+            if let Expr::Variable { value } = expr {
+                return Expr::Assign {
+                    name: value,
+                    value_expr: Box::new(rhs),
+                };
+            }
+        }
+
+        todo!()
+        // error : "Invalid assignment" on token _equals ^
+    }
+
     fn equality(&mut self) -> Expr {
         let mut expr: Expr = self.comparison();
         while self.match_list(vec![TokenType::NE, TokenType::ISEQ]) {
@@ -196,6 +221,27 @@ impl Parser {
         Stmt::Expression(expr)
     }
 
+    fn var_decl(&mut self) -> Stmt {
+        let name = self.consume(TokenType::IDENTIFIER, "Expected variable name.");
+
+        let mut initializer_expr: Option<Expr> = None;
+
+        if self.match_list(vec![TokenType::EQUAL]) {
+            initializer_expr = Some(self.expression());
+        }
+
+        self.consume(TokenType::SEMICOLON, "Expected ';' after value.");
+        return Stmt::Var(name, initializer_expr);
+    }
+
+    fn declaration(&mut self) -> Stmt {
+        if self.match_list(vec![TokenType::LET]) {
+            return self.var_decl();
+        }
+
+        return self.statement();
+    }
+
     fn statement(&mut self) -> Stmt {
         if self.match_list(vec![TokenType::PRINT]) {
             return self.print_stmt();
@@ -208,7 +254,7 @@ impl Parser {
         let mut statements: Vec<Stmt> = vec![];
 
         while !self.done() {
-            statements.push(self.statement());
+            statements.push(self.declaration());
         }
 
         statements

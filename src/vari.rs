@@ -5,10 +5,10 @@ use std::io;
 use std::{any::Any, sync::Arc};
 use std::{fs, io::Write};
 
-pub static VARI: Vari = Vari { had_error: false };
-
+#[derive(Debug, Clone)]
 pub struct Vari {
     pub had_error: bool,
+    pub interpreter: Interpreter,
 }
 
 #[derive(Debug, Clone)]
@@ -25,15 +25,14 @@ impl Vari {
         println!("Error on line {}:  {} {}", line, location, msg);
     }
 
-    fn run(&self, source: &str) {
-        let mut lexer: Lexer = Lexer::new(source.to_owned());
+    fn run(&mut self, source: &str) {
+        let mut lexer: Lexer = Lexer::new(source.to_owned(), (*self).clone());
         let tokens = lexer.scan_tokens();
 
         let mut parser: Parser = Parser::new(tokens);
         let statements = parser.parse();
 
-        let mut interpreter: Interpreter = Interpreter::new();
-        interpreter.interpret(statements);
+        self.interpreter.interpret(statements);
 
         if self.had_error {
             std::process::exit(1);
@@ -49,7 +48,7 @@ impl Vari {
         self.report(line, "", msg);
     }
 
-    pub fn run_prompt(&self) -> () {
+    pub fn run_prompt(&mut self) -> () {
         loop {
             let mut user_inp = String::new();
             print!("> ");
@@ -63,7 +62,7 @@ impl Vari {
         }
     }
 
-    pub fn run_file(&self, file_path: &str) {
+    pub fn run_file(&mut self, file_path: &str) {
         match self.read_source(file_path) {
             Ok(data) => {
                 self.run(data.as_str());

@@ -17,6 +17,13 @@ pub enum Expr {
     Literal {
         value: Box<VariTypes>,
     },
+    Variable {
+        value: Token,
+    },
+    Assign {
+        name: Token,
+        value_expr: Box<Expr>,
+    },
 }
 
 pub trait ExprVisitor<T> {
@@ -68,6 +75,7 @@ impl ExprVisitor<String> for AstPrinter {
                 VariTypes::Object(_any_value) => "todo".to_string(),
             },
             Expr::Grouping { expr } => self.parenthesize("group".to_owned(), vec![*expr]),
+            _ => "todo".to_owned(),
         }
     }
 }
