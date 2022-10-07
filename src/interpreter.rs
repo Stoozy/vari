@@ -20,6 +20,20 @@ impl Interpreter {
         self.visit_stmt(statement);
     }
 
+    fn execute_block(&mut self, stmts: Vec<Stmt>, env: Environment) {
+        let tmp_env = self.env.clone();
+
+        // new env for new block scope
+        self.env = env;
+
+        for stmt in stmts {
+            self.execute(stmt);
+        }
+
+        // then switch back to the original scopes environment
+        self.env = tmp_env;
+    }
+
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
         for statement in statements {
             self.execute(statement);
@@ -85,7 +99,7 @@ impl Interpreter {
         return false;
     }
 
-    fn is_true(&self, object: Box<VariTypes>) -> bool {
+    fn is_true(&mut self, object: Box<VariTypes>) -> bool {
         match *object {
             VariTypes::Nil => return false,
             VariTypes::Boolean(b) => return b,
@@ -191,8 +205,23 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
             }
             Expr::Assign { name, value_expr } => {
                 let value = self.evaluate(*value_expr);
-                self.env.assign(name.lexeme, *value);
-                todo!()
+                self.env.assign(name.lexeme, (*value).clone());
+                return value;
+            }
+            Expr::Logical { lhs, operator, rhs } => {
+                let lhs = self.evaluate(*lhs);
+
+                if operator.token_type == TokenType::OR {
+                    if self.is_true(lhs.clone()) {
+                        return lhs;
+                    } else {
+                        if !self.is_true(lhs.clone()) {
+                            return lhs;
+                        }
+                    }
+                }
+
+                return self.evaluate(*rhs);
             }
         }
     }
@@ -217,6 +246,20 @@ impl StmtVisitor<()> for Interpreter {
                     self.env.define(name.lexeme, VariTypes::Nil);
                 }
             },
+            Stmt::Block(stmt_list) => {
+                self.execute_block(
+                    stmt_list,
+                    Environment::new().set_enclosing(Box::new(self.env.clone())),
+                );
+            }
+            Stmt::If(conditional_expr, then_block, else_block) => {
+                let res = self.evaluate(conditional_expr);
+                if self.is_true(res) {
+                    self.execute(*then_block);
+                } else if let Some(else_stmt) = else_block {
+                    self.execute(*else_stmt);
+                }
+            }
         }
     }
 }

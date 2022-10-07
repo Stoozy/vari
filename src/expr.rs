@@ -24,6 +24,11 @@ pub enum Expr {
         name: Token,
         value_expr: Box<Expr>,
     },
+    Logical {
+        lhs: Box<Expr>,
+        operator: Token,
+        rhs: Box<Expr>,
+    },
 }
 
 pub trait ExprVisitor<T> {

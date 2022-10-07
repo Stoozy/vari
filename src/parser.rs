@@ -15,7 +15,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    fn consume(&mut self, token_type: TokenType, err: &str) -> Token {
+    fn consume(&mut self, token_type: TokenType, _err: &str) -> Token {
         if self.check(token_type) {
             self.advance();
             return self.tokens[self.current - 1].clone();
@@ -133,7 +133,7 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
     }
 
     fn advance(&mut self) {
@@ -175,8 +175,20 @@ impl Parser {
         false
     }
 
+    fn block(&mut self) -> Vec<Stmt> {
+        let mut statements = vec![];
+
+        while !self.check(TokenType::RBRACE) && !self.done() {
+            statements.push(self.declaration());
+        }
+
+        self.consume(TokenType::RBRACE, "Expect '}' after block.");
+
+        statements
+    }
+
     fn assignment(&mut self) -> Expr {
-        let expr = self.equality();
+        let expr = self.or();
 
         if self.match_list(vec![TokenType::EQUAL]) {
             let _equals = self.prev_token();
@@ -188,10 +200,44 @@ impl Parser {
                     value_expr: Box::new(rhs),
                 };
             }
+
+            todo!()
+            // error : "Invalid assignment" on token equals
         }
 
-        todo!()
-        // error : "Invalid assignment" on token _equals ^
+        return expr;
+    }
+
+    fn and(&mut self) -> Expr {
+        let mut lhs = self.equality();
+
+        while self.match_list(vec![TokenType::AND]) {
+            let operator = self.prev_token();
+            let rhs = self.equality();
+            lhs = Expr::Logical {
+                lhs: Box::new(lhs),
+                operator,
+                rhs: Box::new(rhs),
+            }
+        }
+
+        return lhs;
+    }
+
+    fn or(&mut self) -> Expr {
+        let lhs: Expr = self.and();
+
+        while self.match_list(vec![TokenType::OR]) {
+            let operator = self.prev_token();
+            let rhs = self.and();
+            return Expr::Logical {
+                lhs: Box::new(lhs),
+                operator,
+                rhs: Box::new(rhs),
+            };
+        }
+
+        return lhs;
     }
 
     fn equality(&mut self) -> Expr {
@@ -207,6 +253,21 @@ impl Parser {
         }
 
         expr
+    }
+
+    fn if_stmt(&mut self) -> Stmt {
+        self.consume(TokenType::LPAREN, "Expect  '(' after 'if'.");
+        let condition = self.expression();
+        self.consume(TokenType::RPAREN, "Expect  ')' after if condition.");
+
+        let then_block = Box::new(self.statement());
+        let mut else_block = None;
+
+        if self.match_list(vec![TokenType::ELSE]) {
+            else_block = Some(Box::new(self.statement()));
+        }
+
+        return Stmt::If(condition, then_block, else_block);
     }
 
     fn print_stmt(&mut self) -> Stmt {
@@ -245,6 +306,14 @@ impl Parser {
     fn statement(&mut self) -> Stmt {
         if self.match_list(vec![TokenType::PRINT]) {
             return self.print_stmt();
+        }
+
+        if self.match_list(vec![TokenType::LBRACE]) {
+            return Stmt::Block(self.block());
+        }
+
+        if self.match_list(vec![TokenType::IF]) {
+            return self.if_stmt();
         }
 
         self.expr_stmt()
