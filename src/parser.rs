@@ -15,14 +15,15 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
-    fn consume(&mut self, token_type: TokenType, _err: &str) -> Token {
+    fn consume(&mut self, token_type: TokenType, err: &str) -> Token {
         if self.check(token_type) {
             self.advance();
             return self.tokens[self.current - 1].clone();
         }
 
+        panic!("Error: {}", err)
         //VARI.error(0, err); // maybe make vari a member?
-        unreachable!()
+        //unreachable!()
     }
 
     fn primary(&mut self) -> Expr {
@@ -255,6 +256,60 @@ impl Parser {
         expr
     }
 
+    fn for_stmt(&mut self) -> Stmt {
+        self.consume(TokenType::LPAREN, "Expect  '(' after 'for'.");
+
+        let initializer: Stmt;
+
+        if self.match_list(vec![TokenType::SEMICOLON]) {
+            initializer = Stmt::Expression(Expr::Literal {
+                value: Box::new(VariTypes::Nil),
+            });
+        } else if self.match_list(vec![TokenType::LET]) {
+            initializer = self.var_decl();
+        } else {
+            initializer = self.expr_stmt();
+        }
+
+        let mut condition: Option<Expr> = None;
+
+        if !self.check(TokenType::SEMICOLON) {
+            condition = Some(self.expression());
+        }
+
+        self.consume(
+            TokenType::SEMICOLON,
+            "Expect  ';' after for loop condition.",
+        );
+
+        let mut modifying_expr: Option<Expr> = None;
+        if !self.check(TokenType::RPAREN) {
+            modifying_expr = Some(self.expression());
+        }
+
+        self.consume(TokenType::RPAREN, "Expect  ')' after for loop condition.");
+
+        let mut body = self.statement();
+
+        if let Some(mod_expr) = modifying_expr {
+            body = Stmt::Block(vec![body, Stmt::Expression(mod_expr)]);
+        }
+
+        if let Some(cond) = condition {
+            body = Stmt::While(cond, Box::new(body));
+        } else {
+            body = Stmt::While(
+                Expr::Literal {
+                    value: Box::new(VariTypes::Boolean(true)),
+                },
+                Box::new(body),
+            );
+        }
+
+        body = Stmt::Block(vec![initializer, body]);
+        body
+    }
+
     fn if_stmt(&mut self) -> Stmt {
         self.consume(TokenType::LPAREN, "Expect  '(' after 'if'.");
         let condition = self.expression();
@@ -268,6 +323,16 @@ impl Parser {
         }
 
         return Stmt::If(condition, then_block, else_block);
+    }
+
+    fn while_stmt(&mut self) -> Stmt {
+        self.consume(TokenType::LPAREN, "Expect '(' after 'while'");
+        let condition = self.expression();
+        self.consume(TokenType::RPAREN, "Expect ')' after 'while'");
+
+        let body = self.statement();
+
+        Stmt::While(condition, Box::new(body))
     }
 
     fn print_stmt(&mut self) -> Stmt {
@@ -308,8 +373,16 @@ impl Parser {
             return self.print_stmt();
         }
 
+        if self.match_list(vec![TokenType::WHILE]) {
+            return self.while_stmt();
+        }
+
         if self.match_list(vec![TokenType::LBRACE]) {
             return Stmt::Block(self.block());
+        }
+
+        if self.match_list(vec![TokenType::FOR]) {
+            return self.for_stmt();
         }
 
         if self.match_list(vec![TokenType::IF]) {

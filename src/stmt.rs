@@ -1,11 +1,16 @@
 use crate::{expr::Expr, token::Token};
 
+#[derive(Clone)]
 pub enum Stmt {
     Block(Vec<Stmt>),
     Expression(Expr),
     Print(Expr),
-    Var(Token, Option<Expr>), // name, initializer
+    // name, initializer
+    Var(Token, Option<Expr>),
+    // condition, if branch, else branch
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
+    // condition, body
+    While(Expr, Box<Stmt>),
 }
 
 pub trait StmtVisitor<T> {

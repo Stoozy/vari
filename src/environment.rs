@@ -1,9 +1,9 @@
 use crate::{token::Token, vari::VariTypes};
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, VariTypes>,
 }
 
@@ -15,40 +15,43 @@ impl Environment {
         }
     }
 
-    pub fn set_enclosing(mut self, environment: Box<Environment>) -> Environment {
-        self.enclosing = Some(environment);
-        self
+    pub fn from(enclosing: &Rc<RefCell<Environment>>) -> Self {
+        Environment {
+            enclosing: Some(Rc::clone(enclosing)),
+            values: HashMap::new(),
+        }
     }
 
-    pub fn get(&mut self, name: Token) -> VariTypes {
-        if let Some(value) = self.values.get(&name.lexeme) {
+    pub fn get(&mut self, token: Token) -> VariTypes {
+        if let Some(value) = self.values.get(&token.lexeme) {
             return (*value).clone();
         }
 
-        if let Some(mut enclosing_env) = self.enclosing.clone() {
-            return (*enclosing_env).get(name);
+        if let Some(enclosing_env) = self.enclosing.clone() {
+            return (*enclosing_env).borrow_mut().get(token);
         }
 
-        VariTypes::Nil
-        //todo!()
+        todo!()
         // syntax error "undefined vairable"
     }
 
     pub fn assign(&mut self, name: String, value: VariTypes) {
         if self.values.contains_key(&name) {
-            self.values.insert(name, value);
+            self.values.insert(name.clone(), value.clone());
             return;
         }
 
-        if let Some(mut enclosing_env) = self.enclosing.clone() {
-            return (*enclosing_env).assign(name, value);
+        if let Some(enclosing_env) = self.enclosing.clone() {
+            enclosing_env.borrow_mut().assign(name, value);
+            return;
         }
 
-        todo!()
+        unreachable!()
         // error: undefined variable
     }
 
     pub fn define(&mut self, name: String, value: VariTypes) {
+        println!("Defining {:?} as {}", value, name);
         self.values.insert(name, value);
     }
 }

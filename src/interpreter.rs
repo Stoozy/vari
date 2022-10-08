@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::environment::Environment;
 use crate::expr::{Expr, ExprVisitor};
 use crate::stmt::{Stmt, StmtVisitor};
@@ -6,13 +9,13 @@ use crate::vari::VariTypes;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
-    env: Environment,
+    env: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            env: Environment::new(),
+            env: Rc::new(RefCell::new(Environment::new())),
         }
     }
 
@@ -20,8 +23,9 @@ impl Interpreter {
         self.visit_stmt(statement);
     }
 
-    fn execute_block(&mut self, stmts: Vec<Stmt>, env: Environment) {
+    fn execute_block(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Environment>>) {
         let tmp_env = self.env.clone();
+        //let tmp_env = Box::new(self.env.clone());
 
         // new env for new block scope
         self.env = env;
@@ -201,11 +205,11 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
                 return value;
             }
             Expr::Variable { value } => {
-                return Box::new(self.env.get(value));
+                return Box::new(self.env.borrow_mut().get(value));
             }
             Expr::Assign { name, value_expr } => {
                 let value = self.evaluate(*value_expr);
-                self.env.assign(name.lexeme, (*value).clone());
+                self.env.borrow_mut().assign(name.lexeme, (*value).clone());
                 return value;
             }
             Expr::Logical { lhs, operator, rhs } => {
@@ -240,24 +244,31 @@ impl StmtVisitor<()> for Interpreter {
             Stmt::Var(name, initializer) => match initializer {
                 Some(expr_val) => {
                     let val = self.evaluate(expr_val);
-                    self.env.define(name.lexeme, *val);
+                    self.env.borrow_mut().define(name.lexeme, *val);
                 }
                 None => {
-                    self.env.define(name.lexeme, VariTypes::Nil);
+                    self.env.borrow_mut().define(name.lexeme, VariTypes::Nil);
                 }
             },
             Stmt::Block(stmt_list) => {
-                self.execute_block(
-                    stmt_list,
-                    Environment::new().set_enclosing(Box::new(self.env.clone())),
-                );
+                // send the *actual* env to `from` method in Env
+                let env_clone = Rc::new(RefCell::new(Environment::from(&self.env)));
+                self.execute_block(stmt_list, env_clone);
             }
             Stmt::If(conditional_expr, then_block, else_block) => {
-                let res = self.evaluate(conditional_expr);
-                if self.is_true(res) {
+                let val = self.evaluate(conditional_expr);
+                if self.is_true(val) {
                     self.execute(*then_block);
                 } else if let Some(else_stmt) = else_block {
                     self.execute(*else_stmt);
+                }
+            }
+            Stmt::While(conditional_expr, body) => {
+                let mut val = self.evaluate(conditional_expr.clone());
+
+                while self.is_true(val.clone()) {
+                    self.execute((*body).clone());
+                    val = self.evaluate(conditional_expr.clone());
                 }
             }
         }
