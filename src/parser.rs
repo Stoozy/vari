@@ -77,7 +77,7 @@ impl Parser {
             };
         }
 
-        return self.primary();
+        return self.call();
     }
 
     fn factor(&mut self) -> Expr {
@@ -256,6 +256,43 @@ impl Parser {
         expr
     }
 
+    fn finish_call(&mut self, callee: Expr) -> Expr {
+        let mut args = vec![];
+        if !self.check(TokenType::RPAREN) {
+            args.push(self.expression());
+            while self.match_list(vec![TokenType::COMMA]) {
+                args.push(self.expression());
+            }
+        }
+
+        let paren = self.consume(TokenType::RPAREN, "Expected ')' after arguments.");
+
+        if args.len() > 255 {
+            // TODO: handle error
+            panic!("Can't have more than 255 arguments.");
+        }
+
+        Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            args,
+        }
+    }
+
+    fn call(&mut self) -> Expr {
+        let mut expr = self.primary();
+
+        loop {
+            if self.match_list(vec![TokenType::LPAREN]) {
+                expr = self.finish_call(expr);
+            } else {
+                break;
+            }
+        }
+
+        expr
+    }
+
     fn for_stmt(&mut self) -> Stmt {
         self.consume(TokenType::LPAREN, "Expect  '(' after 'for'.");
 
@@ -347,6 +384,26 @@ impl Parser {
         Stmt::Expression(expr)
     }
 
+    fn fun_decl(&mut self) -> Stmt {
+        let name = self.consume(TokenType::IDENTIFIER, "Expected function name after 'fun'");
+        self.consume(TokenType::LPAREN, "Expected '(' after function name.");
+
+        let mut params = vec![];
+
+        if !self.check(TokenType::RPAREN) {
+            params.push(self.consume(TokenType::IDENTIFIER, "Expected parameter name"));
+            while self.match_list(vec![TokenType::COMMA]) {
+                params.push(self.consume(TokenType::IDENTIFIER, "Expected parameter name"));
+            }
+        }
+
+        self.consume(TokenType::RPAREN, "Expected ')' after parameters.");
+        self.consume(TokenType::LBRACE, "Expected '{' after arguments list.");
+        let body = self.block();
+
+        Stmt::Function(name, params, body)
+    }
+
     fn var_decl(&mut self) -> Stmt {
         let name = self.consume(TokenType::IDENTIFIER, "Expected variable name.");
 
@@ -361,6 +418,10 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Stmt {
+        if self.match_list((vec![TokenType::FUN])) {
+            return self.fun_decl();
+        }
+
         if self.match_list(vec![TokenType::LET]) {
             return self.var_decl();
         }

@@ -15,13 +15,6 @@ impl Environment {
         }
     }
 
-    pub fn from(enclosing: &Rc<RefCell<Environment>>) -> Self {
-        Environment {
-            enclosing: Some(Rc::clone(enclosing)),
-            values: HashMap::new(),
-        }
-    }
-
     pub fn get(&mut self, token: Token) -> VariTypes {
         if let Some(value) = self.values.get(&token.lexeme) {
             return (*value).clone();
@@ -31,8 +24,8 @@ impl Environment {
             return (*enclosing_env).borrow_mut().get(token);
         }
 
-        todo!()
-        // syntax error "undefined vairable"
+        // TODO: syntax error "undefined vairable"
+        panic!("Undefined variable {}", token.lexeme);
     }
 
     pub fn assign(&mut self, name: String, value: VariTypes) {
@@ -53,5 +46,14 @@ impl Environment {
     pub fn define(&mut self, name: String, value: VariTypes) {
         println!("Defining {:?} as {}", value, name);
         self.values.insert(name, value);
+    }
+}
+
+impl From<&Rc<RefCell<Environment>>> for Environment {
+    fn from(enclosing: &Rc<RefCell<Environment>>) -> Self {
+        Environment {
+            enclosing: Some(Rc::clone(enclosing)),
+            values: HashMap::new(),
+        }
     }
 }

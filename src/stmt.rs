@@ -11,6 +11,8 @@ pub enum Stmt {
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     // condition, body
     While(Expr, Box<Stmt>),
+    // name, parameters, body
+    Function(Token, Vec<Token>, Vec<Stmt>),
 }
 
 pub trait StmtVisitor<T> {

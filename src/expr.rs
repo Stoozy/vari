@@ -8,6 +8,11 @@ pub enum Expr {
         op: Token,
         rhs: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        args: Vec<Expr>,
+    },
     Unary {
         op: Token,
         rhs: Box<Expr>,
@@ -78,7 +83,7 @@ impl ExprVisitor<String> for AstPrinter {
                 VariTypes::Num(fp) => fp.to_string(),
                 VariTypes::Boolean(b) => b.to_string(),
                 VariTypes::String(strval) => strval,
-                VariTypes::Object(_any_value) => "todo".to_string(),
+                _ => "todo".to_string(),
             },
             Expr::Grouping { expr } => self.parenthesize("group".to_owned(), vec![*expr]),
             _ => "todo".to_owned(),

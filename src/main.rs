@@ -3,6 +3,7 @@ mod expr;
 mod interpreter;
 mod lexer;
 mod parser;
+mod procedure;
 mod stmt;
 mod tests;
 mod token;

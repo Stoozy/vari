@@ -1,4 +1,5 @@
 use crate::interpreter::Interpreter;
+use crate::procedure::Procedure;
 use crate::{lexer::Lexer, parser::Parser};
 
 use std::io;
@@ -18,6 +19,7 @@ pub enum VariTypes {
     String(String),
     Boolean(bool),
     Object(Arc<dyn Any>),
+    Callable(Procedure),
 }
 
 impl Vari {

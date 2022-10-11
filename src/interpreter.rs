@@ -3,18 +3,36 @@ use std::rc::Rc;
 
 use crate::environment::Environment;
 use crate::expr::{Expr, ExprVisitor};
+use crate::procedure::Procedure;
 use crate::stmt::{Stmt, StmtVisitor};
 use crate::token::TokenType;
 use crate::vari::VariTypes;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
+    pub globals: Rc<RefCell<Environment>>,
     env: Rc<RefCell<Environment>>,
+}
+
+pub fn clock(args: &Vec<VariTypes>) -> VariTypes {
+    VariTypes::Num(0.0)
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let globals = RefCell::new(Environment::new());
+
+        let clock_procedure = Procedure::Native {
+            arity: 0,
+            body: Box::new(clock),
+        };
+
+        globals
+            .borrow_mut()
+            .define("clock".to_owned(), VariTypes::Callable(clock_procedure));
+
         Self {
+            globals: Rc::new(globals),
             env: Rc::new(RefCell::new(Environment::new())),
         }
     }
@@ -23,7 +41,7 @@ impl Interpreter {
         self.visit_stmt(statement);
     }
 
-    fn execute_block(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Environment>>) {
+    pub fn execute_block(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Environment>>) {
         let tmp_env = self.env.clone();
         //let tmp_env = Box::new(self.env.clone());
 
@@ -54,6 +72,7 @@ impl Interpreter {
             VariTypes::Boolean(b) => return b.to_string(),
             VariTypes::String(s) => return s,
             VariTypes::Object(_) => return "[object]".to_owned(),
+            VariTypes::Callable(_) => return "[function]".to_owned(),
         }
     }
 
@@ -69,6 +88,7 @@ impl Interpreter {
             VariTypes::String(_) => return matches!(*a, VariTypes::String(_)),
             VariTypes::Boolean(_) => return matches!(*a, VariTypes::Boolean(_)),
             VariTypes::Object(_) => return matches!(*a, VariTypes::Object(_)),
+            VariTypes::Callable(_) => return matches!(*a, VariTypes::Object(_)),
         }
     }
 
@@ -227,6 +247,38 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
 
                 return self.evaluate(*rhs);
             }
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
+                // should just get the identifier of function name
+                let callee = self.evaluate(*callee);
+
+                let mut eval_args = vec![];
+
+                for arg_expr in args {
+                    eval_args.push(*self.evaluate(arg_expr));
+                }
+
+                match *callee {
+                    VariTypes::Callable(pro) => {
+                        if eval_args.len() == pro.arity() {
+                            return Box::new(pro.call(self, eval_args));
+                        } else {
+                            // TODO: error handling
+                            panic!(
+                                "Expected {} arguments but got {}.",
+                                pro.arity(),
+                                eval_args.len()
+                            );
+                        }
+                    }
+                    _ => {
+                        panic!("Can only call functions.");
+                    }
+                }
+            }
         }
     }
 }
@@ -270,6 +322,12 @@ impl StmtVisitor<()> for Interpreter {
                     self.execute((*body).clone());
                     val = self.evaluate(conditional_expr.clone());
                 }
+            }
+            Stmt::Function(name, params, body) => {
+                let procedure = Procedure::from(Stmt::Function(name.clone(), params, body));
+                self.env
+                    .borrow_mut()
+                    .define(name.lexeme, VariTypes::Callable(procedure));
             }
         }
     }
