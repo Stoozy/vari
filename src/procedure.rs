@@ -1,12 +1,14 @@
 use std::{cell::RefCell, fmt, rc::Rc};
 
 use crate::{
-    environment::Environment, interpreter::Interpreter, stmt::Stmt, token::Token, vari::VariTypes,
+    environment::Environment, interpreter::Interpreter, stmt::Stmt, token::Token, vari::VariError,
+    vari::VariTypes,
 };
 
 #[derive(Clone)]
 pub enum Procedure {
     Native {
+        name: String,
         arity: usize,
         body: Box<fn(&Vec<VariTypes>) -> VariTypes>,
     },
@@ -15,22 +17,18 @@ pub enum Procedure {
         name: Token,
         params: Vec<Token>,
         body: Vec<Stmt>,
+        closure: Rc<RefCell<Environment>>,
     },
 }
 
 impl fmt::Debug for Procedure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Native { arity, body } => f
+            Self::Native { arity, .. } => f
                 .debug_struct("[native function]")
                 .field("parameters", arity)
                 .finish(),
-            Self::User {
-                arity,
-                name,
-                params,
-                body,
-            } => f
+            Self::User { arity, name, .. } => f
                 .debug_struct("[function]")
                 .field("parameters", arity)
                 .field("name", &name.lexeme)
@@ -42,15 +40,10 @@ impl fmt::Debug for Procedure {
 impl Procedure {
     pub fn arity(&self) -> usize {
         match &*self {
-            Procedure::Native { arity, body } => {
+            Procedure::Native { arity, .. } => {
                 return *arity;
             }
-            Procedure::User {
-                arity,
-                name,
-                params,
-                body,
-            } => {
+            Procedure::User { arity, .. } => {
                 return *arity;
             }
         }
@@ -58,37 +51,27 @@ impl Procedure {
 
     pub fn call(&self, interpreter: &mut Interpreter, args: Vec<VariTypes>) -> VariTypes {
         match &*self {
-            Procedure::Native { arity, body } => (*body)(&args),
+            Procedure::Native { body, .. } => (*body)(&args),
             Procedure::User {
-                arity,
-                name,
                 params,
                 body,
+                closure,
+                ..
             } => {
-                let mut proc_env = Environment::from(&interpreter.globals);
+                let env = Rc::new(RefCell::new(Environment::from(closure)));
 
-                for it in params.iter().zip(args.iter()) {
-                    let (param, arg) = it;
-                    proc_env.define(param.lexeme.clone(), arg.clone());
+                for (param, arg) in params.iter().zip(args.iter()) {
+                    env.borrow_mut().define(param.lexeme.clone(), arg.clone());
                 }
 
-                interpreter.execute_block(body.clone(), Rc::new(RefCell::new(proc_env)));
-                return VariTypes::Nil;
-            }
-        }
-    }
-}
-impl From<Stmt> for Procedure {
-    fn from(stmt: Stmt) -> Self {
-        match stmt {
-            Stmt::Function(name, params, body) => Procedure::User {
-                arity: params.len(),
-                name,
-                params,
-                body,
-            },
-            _ => {
-                panic!("Must be Function type");
+                match interpreter.execute_block((*body).clone(), env) {
+                    Err(VariError::Return(retval)) => {
+                        return retval;
+                    }
+                    // No return value,
+                    // so return nil by default
+                    Ok(_) => return VariTypes::Nil,
+                }
             }
         }
     }

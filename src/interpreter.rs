@@ -1,11 +1,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::environment::Environment;
 use crate::expr::{Expr, ExprVisitor};
 use crate::procedure::Procedure;
 use crate::stmt::{Stmt, StmtVisitor};
 use crate::token::TokenType;
+use crate::vari::VariError;
 use crate::vari::VariTypes;
 
 #[derive(Debug, Clone)]
@@ -13,16 +15,21 @@ pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
     env: Rc<RefCell<Environment>>,
 }
-
-pub fn clock(args: &Vec<VariTypes>) -> VariTypes {
-    VariTypes::Num(0.0)
+pub fn clock(_: &Vec<VariTypes>) -> VariTypes {
+    VariTypes::Num(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as f64,
+    )
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let globals = RefCell::new(Environment::new());
+        let globals = Rc::new(RefCell::new(Environment::new()));
 
         let clock_procedure = Procedure::Native {
+            name: String::from("clock"),
             arity: 0,
             body: Box::new(clock),
         };
@@ -32,16 +39,20 @@ impl Interpreter {
             .define("clock".to_owned(), VariTypes::Callable(clock_procedure));
 
         Self {
-            globals: Rc::new(globals),
-            env: Rc::new(RefCell::new(Environment::new())),
+            globals: Rc::clone(&globals),
+            env: Rc::new(RefCell::new(Environment::from(&globals))),
         }
     }
 
-    fn execute(&mut self, statement: Stmt) {
-        self.visit_stmt(statement);
+    fn execute(&mut self, statement: Stmt) -> Result<(), VariError> {
+        self.visit_stmt(statement)
     }
 
-    pub fn execute_block(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Environment>>) {
+    pub fn execute_block(
+        &mut self,
+        stmts: Vec<Stmt>,
+        env: Rc<RefCell<Environment>>,
+    ) -> Result<(), VariError> {
         let tmp_env = self.env.clone();
         //let tmp_env = Box::new(self.env.clone());
 
@@ -49,17 +60,20 @@ impl Interpreter {
         self.env = env;
 
         for stmt in stmts {
-            self.execute(stmt);
+            self.execute(stmt)?
         }
 
         // then switch back to the original scopes environment
         self.env = tmp_env;
+        Ok(())
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), VariError> {
         for statement in statements {
-            self.execute(statement);
+            self.execute(statement)?;
         }
+
+        Ok(())
     }
 
     pub fn stringify(&self, vari_obj: VariTypes) -> String {
@@ -72,7 +86,14 @@ impl Interpreter {
             VariTypes::Boolean(b) => return b.to_string(),
             VariTypes::String(s) => return s,
             VariTypes::Object(_) => return "[object]".to_owned(),
-            VariTypes::Callable(_) => return "[function]".to_owned(),
+            VariTypes::Callable(fun) => match fun {
+                Procedure::User { name, .. } => {
+                    format!("<fn {}>", name.lexeme)
+                }
+                Procedure::Native { name, .. } => {
+                    format!("<native fn {}>", name)
+                }
+            },
         }
     }
 
@@ -247,11 +268,7 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
 
                 return self.evaluate(*rhs);
             }
-            Expr::Call {
-                callee,
-                paren,
-                args,
-            } => {
+            Expr::Call { callee, args, .. } => {
                 // should just get the identifier of function name
                 let callee = self.evaluate(*callee);
 
@@ -283,51 +300,74 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
     }
 }
 
-impl StmtVisitor<()> for Interpreter {
-    fn visit_stmt(&mut self, stmt: Stmt) {
+impl StmtVisitor<Result<(), VariError>> for Interpreter {
+    fn visit_stmt(&mut self, stmt: Stmt) -> Result<(), VariError> {
         match stmt {
             Stmt::Expression(expr) => {
                 self.evaluate(expr);
+                Ok(())
             }
             Stmt::Print(expr) => {
                 let val = self.evaluate(expr);
                 println!("{}", self.stringify(*val));
+                Ok(())
             }
             Stmt::Var(name, initializer) => match initializer {
                 Some(expr_val) => {
                     let val = self.evaluate(expr_val);
                     self.env.borrow_mut().define(name.lexeme, *val);
+                    Ok(())
                 }
                 None => {
                     self.env.borrow_mut().define(name.lexeme, VariTypes::Nil);
+                    Ok(())
                 }
             },
             Stmt::Block(stmt_list) => {
                 // send the *actual* env to `from` method in Env
                 let env_clone = Rc::new(RefCell::new(Environment::from(&self.env)));
-                self.execute_block(stmt_list, env_clone);
+                self.execute_block(stmt_list, env_clone)?;
+                Ok(())
             }
             Stmt::If(conditional_expr, then_block, else_block) => {
                 let val = self.evaluate(conditional_expr);
                 if self.is_true(val) {
-                    self.execute(*then_block);
+                    self.execute(*then_block)?;
                 } else if let Some(else_stmt) = else_block {
-                    self.execute(*else_stmt);
+                    self.execute(*else_stmt)?;
                 }
+
+                Ok(())
             }
             Stmt::While(conditional_expr, body) => {
                 let mut val = self.evaluate(conditional_expr.clone());
 
                 while self.is_true(val.clone()) {
-                    self.execute((*body).clone());
+                    self.execute((*body).clone())?;
                     val = self.evaluate(conditional_expr.clone());
                 }
+                Ok(())
             }
             Stmt::Function(name, params, body) => {
-                let procedure = Procedure::from(Stmt::Function(name.clone(), params, body));
+                let arity = params.len();
+
+                let procedure = Procedure::User {
+                    name: name.clone(),
+                    params,
+                    body,
+                    arity,
+                    closure: Rc::clone(&self.env),
+                };
+
                 self.env
                     .borrow_mut()
                     .define(name.lexeme, VariTypes::Callable(procedure));
+                Ok(())
+            }
+            Stmt::Return(_, expr) => {
+                let retval = *self.evaluate(expr);
+                println!("Returning value {:?}", retval);
+                Err(VariError::Return(retval))
             }
         }
     }

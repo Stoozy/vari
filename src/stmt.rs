@@ -1,4 +1,4 @@
-use crate::{expr::Expr, token::Token};
+use crate::{environment::Environment, expr::Expr, token::Token};
 
 #[derive(Clone)]
 pub enum Stmt {
@@ -11,8 +11,9 @@ pub enum Stmt {
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     // condition, body
     While(Expr, Box<Stmt>),
-    // name, parameters, body
+    // name, parameters, body, closure
     Function(Token, Vec<Token>, Vec<Stmt>),
+    Return(Token, Expr),
 }
 
 pub trait StmtVisitor<T> {

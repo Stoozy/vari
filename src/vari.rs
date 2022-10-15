@@ -12,6 +12,10 @@ pub struct Vari {
     pub interpreter: Interpreter,
 }
 
+pub enum VariError {
+    Return(VariTypes),
+}
+
 #[derive(Debug, Clone)]
 pub enum VariTypes {
     Nil,

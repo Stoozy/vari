@@ -1,5 +1,5 @@
 use crate::stmt::Stmt;
-use crate::vari::VariTypes;
+use crate::vari::{Vari, VariTypes};
 use crate::{
     expr::Expr,
     token::{Token, TokenType},
@@ -362,6 +362,21 @@ impl Parser {
         return Stmt::If(condition, then_block, else_block);
     }
 
+    fn return_stmt(&mut self) -> Stmt {
+        let keyword = self.prev_token();
+        let mut value = Expr::Literal {
+            value: Box::new(VariTypes::Nil),
+        };
+
+        if !self.check(TokenType::SEMICOLON) {
+            value = self.expression();
+        }
+
+        self.consume(TokenType::SEMICOLON, "Expect ';' after return value");
+
+        Stmt::Return(keyword, value)
+    }
+
     fn while_stmt(&mut self) -> Stmt {
         self.consume(TokenType::LPAREN, "Expect '(' after 'while'");
         let condition = self.expression();
@@ -418,7 +433,7 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Stmt {
-        if self.match_list((vec![TokenType::FUN])) {
+        if self.match_list(vec![TokenType::FUN]) {
             return self.fun_decl();
         }
 
@@ -434,12 +449,16 @@ impl Parser {
             return self.print_stmt();
         }
 
-        if self.match_list(vec![TokenType::WHILE]) {
-            return self.while_stmt();
+        if self.match_list(vec![TokenType::RETURN]) {
+            return self.return_stmt();
         }
 
         if self.match_list(vec![TokenType::LBRACE]) {
             return Stmt::Block(self.block());
+        }
+
+        if self.match_list(vec![TokenType::WHILE]) {
+            return self.while_stmt();
         }
 
         if self.match_list(vec![TokenType::FOR]) {

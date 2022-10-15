@@ -25,7 +25,7 @@ impl Environment {
         }
 
         // TODO: syntax error "undefined vairable"
-        panic!("Undefined variable {}", token.lexeme);
+        panic!("Undefined variable {} in {:?}", token.lexeme, self.values);
     }
 
     pub fn assign(&mut self, name: String, value: VariTypes) {
@@ -44,7 +44,6 @@ impl Environment {
     }
 
     pub fn define(&mut self, name: String, value: VariTypes) {
-        println!("Defining {:?} as {}", value, name);
         self.values.insert(name, value);
     }
 }
