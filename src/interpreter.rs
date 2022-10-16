@@ -60,7 +60,15 @@ impl Interpreter {
         self.env = env;
 
         for stmt in stmts {
-            self.execute(stmt)?
+            match self.execute(stmt) {
+                Ok(_) => {}
+                Err(e) => {
+                    // dont't forget to switch back
+                    // to old env before returning err
+                    self.env = tmp_env;
+                    return Err(e);
+                }
+            }
         }
 
         // then switch back to the original scopes environment
@@ -366,7 +374,6 @@ impl StmtVisitor<Result<(), VariError>> for Interpreter {
             }
             Stmt::Return(_, expr) => {
                 let retval = *self.evaluate(expr);
-                println!("Returning value {:?}", retval);
                 Err(VariError::Return(retval))
             }
         }
