@@ -171,6 +171,7 @@ impl Lexer {
             '/' => self.add_token(TokenType::SLASH),
             '+' => self.add_token(TokenType::PLUS),
             '-' => self.add_token(TokenType::MINUS),
+            '%' => self.add_token(TokenType::MODULO),
             ';' => self.add_token(TokenType::SEMICOLON),
 
             // ignore whitespace

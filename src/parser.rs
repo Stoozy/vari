@@ -99,7 +99,7 @@ impl Parser {
     fn term(&mut self) -> Expr {
         let mut expr: Expr = self.factor();
 
-        while self.match_list(vec![TokenType::MINUS, TokenType::PLUS]) {
+        while self.match_list(vec![TokenType::MINUS, TokenType::PLUS, TokenType::MODULO]) {
             let operator: Token = self.prev_token();
             let rhs: Expr = self.factor();
             expr = Expr::Binary {
