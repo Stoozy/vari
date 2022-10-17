@@ -21,7 +21,7 @@ a type system.
 ### Install & Run
 
 
-To get started, go grab the rust toolchain [here](https://www.rust-lang.org/tools/install) (if you don't have one already). 
+To get started, go grab the rust toolchain [here](https://www.rust-lang.org/tools/install) (if you don't have it already). 
 
 Then run the following:
 
