@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -93,7 +94,9 @@ impl Interpreter {
             VariTypes::Num(v) => return v.to_string(),
             VariTypes::Boolean(b) => return b.to_string(),
             VariTypes::String(s) => return s,
-            VariTypes::Object(_) => return "[object]".to_owned(),
+            VariTypes::Struct(map) => {
+                return format!("{:?}", map);
+            }
             VariTypes::Callable(fun) => match fun {
                 Procedure::User { name, .. } => {
                     format!("<fn {}>", name.lexeme)
@@ -116,8 +119,8 @@ impl Interpreter {
             VariTypes::Num(_) => return matches!(*a, VariTypes::Num(_)),
             VariTypes::String(_) => return matches!(*a, VariTypes::String(_)),
             VariTypes::Boolean(_) => return matches!(*a, VariTypes::Boolean(_)),
-            VariTypes::Object(_) => return matches!(*a, VariTypes::Object(_)),
-            VariTypes::Callable(_) => return matches!(*a, VariTypes::Object(_)),
+            VariTypes::Struct(_) => return matches!(*a, VariTypes::Struct(_)),
+            VariTypes::Callable(_) => return matches!(*a, VariTypes::Callable(_)),
         }
     }
 
@@ -280,6 +283,49 @@ impl ExprVisitor<Box<VariTypes>> for Interpreter {
                 }
 
                 return self.evaluate(*rhs);
+            }
+            Expr::Struct { values } => {
+                let mut map: HashMap<String, VariTypes> = HashMap::new();
+                for (name, expr) in values {
+                    map.insert(name, *self.evaluate(expr));
+                }
+                return Box::from(VariTypes::Struct(map));
+            }
+            Expr::Get { expr, name } => {
+                let obj = self.evaluate(*expr);
+                match *obj {
+                    VariTypes::Struct(map) => {
+                        if map.contains_key(&name) {
+                            // FIXME: need a mutable reference to hashmap
+                            // in order to assign properties after initialization
+                            // see Expr::Set
+                            return Box::new(map[&name].clone());
+                        } else {
+                            println!("Property `{}` doesn't exist on this object.", name);
+                            return Box::new(VariTypes::Nil);
+                        }
+                    }
+                    _ => {
+                        // TODO: handle runtime error
+                        println!("Only structs have properties.");
+                        loop {}
+                    }
+                }
+            }
+            Expr::Set { expr, name, value } => {
+                let obj = self.evaluate(*expr);
+                let val = self.evaluate(*value);
+                match *obj {
+                    VariTypes::Struct(mut map) => {
+                        map.insert(name, *val);
+                        return Box::new(VariTypes::Nil);
+                    }
+                    _ => {
+                        // TODO: handle runtime error
+                        println!("Can't assign to a non-struct variable.");
+                        loop {}
+                    }
+                }
             }
             Expr::Call { callee, args, .. } => {
                 // should just get the identifier of function name

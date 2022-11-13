@@ -20,13 +20,14 @@ impl Lexer {
         keywords_map.insert("else".to_owned(), TokenType::ELSE);
         keywords_map.insert("false".to_owned(), TokenType::FALSE);
         keywords_map.insert("for".to_owned(), TokenType::FOR);
-        keywords_map.insert("fun".to_owned(), TokenType::FUN);
+        keywords_map.insert("fn".to_owned(), TokenType::FUN);
         keywords_map.insert("if".to_owned(), TokenType::IF);
         keywords_map.insert("nil".to_owned(), TokenType::NIL);
         keywords_map.insert("or".to_owned(), TokenType::OR);
         keywords_map.insert("print".to_owned(), TokenType::PRINT);
         keywords_map.insert("return".to_owned(), TokenType::RETURN);
         keywords_map.insert("super".to_owned(), TokenType::SUPER);
+        keywords_map.insert("struct".to_owned(), TokenType::STRUCT);
         keywords_map.insert("this".to_owned(), TokenType::THIS);
         keywords_map.insert("true".to_owned(), TokenType::TRUE);
         keywords_map.insert("let".to_owned(), TokenType::LET);
@@ -173,6 +174,7 @@ impl Lexer {
             '-' => self.add_token(TokenType::MINUS),
             '%' => self.add_token(TokenType::MODULO),
             ';' => self.add_token(TokenType::SEMICOLON),
+            ':' => self.add_token(TokenType::COLON),
 
             // ignore whitespace
             ' ' => {}

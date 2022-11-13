@@ -2,8 +2,8 @@ use crate::interpreter::Interpreter;
 use crate::procedure::Procedure;
 use crate::{lexer::Lexer, parser::Parser};
 
+use std::collections::HashMap;
 use std::io;
-use std::{any::Any, sync::Arc};
 use std::{fs, io::Write};
 
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub enum VariTypes {
     Num(f64),
     String(String),
     Boolean(bool),
-    Object(Arc<dyn Any>),
+    Struct(HashMap<String, VariTypes>),
     Callable(Procedure),
 }
 

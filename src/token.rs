@@ -17,6 +17,7 @@ pub enum TokenType {
     MINUS,
     PLUS,
     SEMICOLON,
+    COLON,
     SLASH,
     STAR,
     MODULO,
@@ -35,7 +36,7 @@ pub enum TokenType {
     NUMBER,
     // Keywords.
     AND,
-    CLASS,
+    STRUCT,
     ELSE,
     FALSE,
     FUN,

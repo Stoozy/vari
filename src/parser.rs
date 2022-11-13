@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::stmt::Stmt;
-use crate::vari::{Vari, VariTypes};
+use crate::vari::VariTypes;
 use crate::{
     expr::Expr,
     token::{Token, TokenType},
@@ -62,6 +64,35 @@ impl Parser {
             return Expr::Grouping {
                 expr: Box::new(expr),
             };
+        }
+
+        if self.match_list(vec![TokenType::LBRACE]) {
+            let mut props = HashMap::new();
+
+            while !self.check(TokenType::RBRACE) {
+                let name = self.consume(TokenType::IDENTIFIER, "Expected name for property");
+                self.consume(TokenType::COLON, "Expected colon after property name");
+                let expr = self.expression();
+
+                props.insert(name.lexeme, expr);
+
+                match self.peek().token_type {
+                    TokenType::RBRACE => {
+                        self.consume(TokenType::RBRACE, "Expected '}' after struct");
+                        return Expr::Struct { values: props };
+                    }
+                    TokenType::COMMA => {
+                        self.consume(TokenType::COMMA, "Expected ',' after field expression");
+                    }
+                    _ => {
+                        panic!("Unexpected token."); // TODO: handle this properly
+                    }
+                }
+            }
+
+            // only happens when struct is empty
+            self.consume(TokenType::RBRACE, "Expected '}' after struct");
+            return Expr::Struct { values: props };
         }
 
         panic!("Expected expression.");
@@ -157,6 +188,7 @@ impl Parser {
         matches!(self.tokens[self.current].token_type, TokenType::EOF)
     }
 
+    // checks if next token is `token_type`
     fn check(&self, token_type: TokenType) -> bool {
         if self.done() {
             return false;
@@ -199,6 +231,12 @@ impl Parser {
                 return Expr::Assign {
                     name: value,
                     value_expr: Box::new(rhs),
+                };
+            } else if let Expr::Get { expr, name } = expr {
+                return Expr::Set {
+                    expr,
+                    name,
+                    value: Box::new(rhs),
                 };
             }
 
@@ -285,6 +323,12 @@ impl Parser {
         loop {
             if self.match_list(vec![TokenType::LPAREN]) {
                 expr = self.finish_call(expr);
+            } else if self.match_list(vec![TokenType::DOT]) {
+                let name = self.consume(TokenType::IDENTIFIER, "Expected property name after '.'.");
+                expr = Expr::Get {
+                    expr: Box::new(expr),
+                    name: name.lexeme,
+                };
             } else {
                 break;
             }
@@ -432,6 +476,18 @@ impl Parser {
         return Stmt::Var(name, initializer_expr);
     }
 
+    fn struct_decl(&mut self) -> Stmt {
+        let name = self.consume(TokenType::IDENTIFIER, "Expected struct name.");
+        let mut initializer_expr: Option<Expr> = None;
+
+        if self.match_list(vec![TokenType::EQUAL]) {
+            initializer_expr = Some(self.expression()); // this should be Expr::Struct
+        }
+
+        self.consume(TokenType::SEMICOLON, "Expected ';' after value.");
+        return Stmt::Var(name, initializer_expr);
+    }
+
     fn declaration(&mut self) -> Stmt {
         if self.match_list(vec![TokenType::FUN]) {
             return self.fun_decl();
@@ -439,6 +495,10 @@ impl Parser {
 
         if self.match_list(vec![TokenType::LET]) {
             return self.var_decl();
+        }
+
+        if self.match_list(vec![TokenType::STRUCT]) {
+            return self.struct_decl();
         }
 
         return self.statement();

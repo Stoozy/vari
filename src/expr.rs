@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::token::Token;
 use crate::vari::VariTypes;
 
@@ -19,6 +21,18 @@ pub enum Expr {
     },
     Grouping {
         expr: Box<Expr>,
+    },
+    Struct {
+        values: HashMap<String, Expr>,
+    },
+    Get {
+        expr: Box<Expr>, // object expression
+        name: String,    // property name
+    },
+    Set {
+        expr: Box<Expr>,  // object expression
+        name: String,     // property name
+        value: Box<Expr>, // value to be assigned
     },
     Literal {
         value: Box<VariTypes>,

@@ -1,4 +1,6 @@
-use crate::{environment::Environment, expr::Expr, token::Token};
+use std::collections::HashMap;
+
+use crate::{environment::Environment, expr::Expr, token::Token, vari::VariTypes};
 
 #[derive(Clone)]
 pub enum Stmt {
