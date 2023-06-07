@@ -20,6 +20,7 @@ fn main() {
         had_error: false,
         interpreter: Interpreter::new(),
     };
+
     if args.len() > 2 {
         println!("Usage: vari <file>");
     } else if args.len() == 2 {

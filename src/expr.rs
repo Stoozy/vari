@@ -57,7 +57,10 @@ pub trait ExprVisitor<T> {
 
 pub struct AstPrinter;
 
+// used by tests
+#[allow(dead_code)]
 impl AstPrinter {
+
     pub fn new() -> Self {
         Self
     }
@@ -104,3 +107,5 @@ impl ExprVisitor<String> for AstPrinter {
         }
     }
 }
+
+

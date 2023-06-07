@@ -38,7 +38,9 @@ impl Vari {
         let mut parser: Parser = Parser::new(tokens);
         let statements = parser.parse();
 
-        self.interpreter.interpret(statements);
+        self.interpreter.interpret(statements).ok();
+        // let printer = AstPrinter::new();
+        // printer.print(Expr::new(statements));
 
         if self.had_error {
             std::process::exit(1);

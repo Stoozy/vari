@@ -1,7 +1,5 @@
-use std::any::Any;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::sync::Arc;
 
 use crate::vari::VariTypes;
 
@@ -78,6 +76,8 @@ impl Token {
         }
     }
 
+    // used by tests
+    #[allow(dead_code)]
     pub fn to_string(self) -> String {
         format!(
             "{} {} {:?}",
